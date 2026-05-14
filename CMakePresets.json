@@ -1,0 +1,32 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "common",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
+            }
+        },
+        {
+            "name": "vs2022",
+            "inherits": "common",
+            "generator": "Visual Studio 17 2022",
+            "architecture": "x64",
+            "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+        },
+        {
+            "name": "vs2026",
+            "inherits": "common",
+            "generator": "Visual Studio 18 2026",
+            "architecture": "x64",
+            "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+        }
+    ],
+    "buildPresets": [
+        { "name": "vs2022", "configurePreset": "vs2022", "configuration": "Release" },
+        { "name": "vs2026", "configurePreset": "vs2026", "configuration": "Release" }
+    ]
+}

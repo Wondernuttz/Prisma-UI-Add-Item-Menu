@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prisma UI AddItem Menu</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Two views, drill-down navigation:
+           #modsView : top-level mod list with search.
+           #itemsView: items belonging to the selected mod, with search + pagination + add. -->
+
+    <div id="root">
+
+        <!-- ─── View 1: Mod list ────────────────────────────────────────── -->
+        <section id="modsView" class="view active">
+            <header>
+                <h1>Prisma UI AddItem Menu</h1>
+                <button class="closeBtn" data-action="close" title="Close">×</button>
+            </header>
+
+            <div class="filters">
+                <input id="modSearch" type="text" placeholder="Filter mods…" autocomplete="off">
+                <label class="toggle">
+                    <input type="checkbox" id="excludeVanillaToggle">
+                    <span>Hide vanilla</span>
+                </label>
+            </div>
+
+            <div class="status" id="modsStatus">Loading mod list…</div>
+
+            <div class="list-container">
+                <ul id="modList"></ul>
+            </div>
+        </section>
+
+        <!-- ─── View 2: Items in a single mod ───────────────────────────── -->
+        <section id="itemsView" class="view">
+            <header>
+                <button class="backBtn" data-action="back" title="Back">‹ Mods</button>
+                <h1 id="itemsTitle">Items</h1>
+                <button class="closeBtn" data-action="close" title="Close">×</button>
+            </header>
+
+            <div class="filters">
+                <input id="itemSearch" type="text" placeholder="Search items…" autocomplete="off">
+            </div>
+
+            <nav class="tabs" id="tabs">
+                <button class="tab active" data-type="">All</button>
+                <button class="tab" data-type="WEAP">Weapons</button>
+                <button class="tab" data-type="ARMO">Armor</button>
+                <button class="tab" data-type="POTN">Potions</button>
+                <button class="tab" data-type="POIS">Poisons</button>
+                <button class="tab" data-type="FOOD">Food</button>
+                <button class="tab" data-type="INGR">Ingredients</button>
+                <button class="tab" data-type="BOOK">Books</button>
+                <button class="tab" data-type="STOM">Spell Tomes</button>
+                <button class="tab" data-type="MISC">Misc</button>
+                <button class="tab" data-type="AMMO">Ammo</button>
+                <button class="tab" data-type="SLGM">Soul Gems</button>
+                <button class="tab" data-type="KEYM">Keys</button>
+            </nav>
+
+            <div class="status" id="itemsStatus">Loading…</div>
+
+            <div class="item-body">
+                <div class="list-container">
+                    <div class="item-list-header" aria-hidden="true">
+                        <span class="name">Name</span>
+                        <span class="type">Type</span>
+                        <span class="weight">Wt</span>
+                        <span class="value">Gold</span>
+                    </div>
+                    <ul id="itemList"></ul>
+                </div>
+            </div>
+
+            <footer>
+                <div class="qty">
+                    <button id="qtyMinus" title="Decrease">−</button>
+                    <input id="qtyInput" type="number" min="1" max="32767" value="1">
+                    <button id="qtyPlus" title="Increase">+</button>
+                </div>
+                <div class="qty-presets">
+                    <button class="preset" data-qty="1"    title="Set quantity to 1">×1</button>
+                    <button class="preset" data-qty="10"   title="Set quantity to 10">×10</button>
+                    <button class="preset" data-qty="100"  title="Set quantity to 100">×100</button>
+                    <button class="preset" data-qty="1000" title="Set quantity to 1000">×1000</button>
+                </div>
+                <button id="qtyLock" class="qty-lock" type="button" aria-pressed="false" title="Keep the selected quantity after each action">Lock Qty</button>
+                <button id="useBtn" class="hidden" disabled>No Direct Action</button>
+                <button id="addBtn" disabled>Add to Inventory</button>
+                <div id="pager">
+                    <button id="prevPage" disabled>‹ Prev</button>
+                    <span id="pageLabel">page 1</span>
+                    <button id="nextPage" disabled>Next ›</button>
+                </div>
+            </footer>
+        </section>
+
+    </div>
+
+    <div id="addToast" class="add-toast hidden"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

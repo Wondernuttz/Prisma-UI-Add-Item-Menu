@@ -1,0 +1,11 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+    "name": "prisma-ui-additem-menu",
+    "version-string": "0.1.0",
+    "description": "Prisma UI AddItem Menu - Skyrim AddItemMenu-style mod built on PrismaUI.",
+    "homepage": "https://github.com/Wondernuttz/Prisma-UI-Add-Item-Menu",
+    "dependencies": [
+        "commonlibsse-ng",
+        "spdlog"
+    ]
+}

@@ -1,0 +1,23 @@
+{
+    "modName": "PrismaUIAddItemMenu",
+    "displayName": "Prisma UI AddItem Menu",
+    "minMcmVersion": 11,
+    "cursorFillMode": "topToBottom",
+    "content": [
+        {
+            "text": "General",
+            "type": "header"
+        },
+        {
+            "id": "PrismaUIAddItemMenu_ToggleHotkey:General",
+            "text": "Toggle Hotkey",
+            "type": "keymap",
+            "help": "Press a key to toggle the Prisma UI AddItem Menu.",
+            "valueOptions": {
+                "sourceType": "GlobalValue",
+                "sourceForm": "PrismaUIAddItemMenu.esp|800",
+                "defaultValue": 59
+            }
+        }
+    ]
+}

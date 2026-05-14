@@ -1,0 +1,36 @@
+# Build output
+build/
+out/
+.vs/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# Visual Studio / CMake generated files
+*.sln
+*.slnx
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.user
+
+# Compiled binaries and debug artifacts
+*.dll
+*.exe
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.obj
+*.iobj
+*.ipdb
+*.pch
+*.tlog
+*.recipe
+
+# Local screenshots / working notes
+current-ui-*.png
+HANDOFF.md
+
+# Runtime logs
+*.log
