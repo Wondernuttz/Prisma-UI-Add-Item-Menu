@@ -116,6 +116,24 @@ namespace PrismaBridge
             return s.substr(0, maxLen) + "...";
         }
 
+        void LogControlState(const char* where)
+        {
+            auto* controlMap = RE::ControlMap::GetSingleton();
+            if (!controlMap) {
+                logger::warn("AddItem controls [{}]: ControlMap unavailable", where);
+                return;
+            }
+
+            logger::info("AddItem controls [{}]: fighting={} movement={} activate={} menu={} looking={} jumping={}",
+                         where,
+                         controlMap->IsFightingControlsEnabled(),
+                         controlMap->IsMovementControlsEnabled(),
+                         controlMap->IsActivateControlsEnabled(),
+                         controlMap->IsMenuControlsEnabled(),
+                         controlMap->IsLookingControlsEnabled(),
+                         controlMap->IsJumpingControlsEnabled());
+        }
+
         std::string SerializeQueryResponse(const ItemEnumerator::QueryResponse& r)
         {
             std::ostringstream ss;
@@ -430,6 +448,7 @@ namespace PrismaBridge
                 }
 
                 player->AddObjectToContainer(bound, nullptr, count, nullptr);
+                LogControlState("after AddObjectToContainer");
                 PlayAddResultSound(true, form);
                 logger::info("AddItem: +{} {} ({}/{:08X})", count, bound->GetName(), plugin, localId);
                 std::ostringstream msg;
@@ -635,7 +654,7 @@ namespace PrismaBridge
         const auto sets = Settings::Get();
         g_api->Show(g_view);
         g_menuOpen = true;
-        g_api->Focus(g_view, sets.pauseGameWhileOpen, /*disableFocusMenu=*/true);
+        g_api->Focus(g_view, sets.pauseGameWhileOpen, /*disableFocusMenu=*/false);
         logger::info("PrismaBridge: menu opened (domReady={}, pause={}, excludeVanillaDefault={})",
                      g_domReady.load(), sets.pauseGameWhileOpen, sets.excludeVanillaByDefault);
 
@@ -657,6 +676,7 @@ namespace PrismaBridge
         g_menuOpen = false;
         if (!g_api || !g_view) return;
 
+        LogControlState("before close");
         g_api->Unfocus(g_view);
         g_api->Hide(g_view);
         logger::info("PrismaBridge: menu closed (view hidden, kept alive)");
