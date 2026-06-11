@@ -219,19 +219,12 @@
         const pane = document.getElementById('previewPane');
         pane.classList.toggle('hidden', !previewAvailable());
         if (!previewAvailable()) return;
-        // Square preview as large as the column allows; pane and base follow it
+        // Square preview as tall as the list allows; pane width follows the square
         const rect = document.getElementById('previewRect');
-        const size = Math.max(200, pane.clientHeight - 210);
-        pane.style.width = (size + 40) + 'px';
+        const size = Math.max(200, pane.clientHeight - 130);
+        pane.style.width = (size + 24) + 'px';
         rect.style.width = size + 'px';
         rect.style.height = size + 'px';
-        const base = document.getElementById('previewCaseBase');
-        if (base) base.style.width = (size + 32) + 'px';
-    }
-
-    function updatePlaque(it) {
-        const plaque = document.getElementById('previewPlaque');
-        if (plaque) plaque.textContent = it ? (it.name + ' — ' + (it.value || 0) + 'g') : '—';
     }
 
     // ── View switching ─────────────────────────────────────────────────────
@@ -450,7 +443,6 @@
         if (next) next.classList.add('selected');
         if (scrollIntoView) keepItemVisible(next);
         syncPvSlider(state.items[i]);
-        updatePlaque(state.items[i]);
         showPreviewNow(state.items[i]);
         restoreActionButtonLabels();
     }
