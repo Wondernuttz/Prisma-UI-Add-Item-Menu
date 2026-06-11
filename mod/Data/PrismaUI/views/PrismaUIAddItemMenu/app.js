@@ -147,6 +147,8 @@
         return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
     }
 
+    const pv = { zoom: 1, panX: 0, panY: 0 };
+
     function showPreviewNow(it) {
         if (!previewAvailable() || !it) return;
         const rect = previewRectPx();
@@ -155,7 +157,20 @@
             plugin: it.plugin,
             localId: Number(it.localId) >>> 0,
             x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+            zoom: pv.zoom, panX: pv.panX, panY: pv.panY,
         }));
+    }
+
+    function refreshPreviewView() {
+        const it = state.items[state.selectedIndex];
+        if (it) showPreviewNow(it);
+    }
+    const refreshPreviewDebounced = debounce(refreshPreviewView, 100);
+
+    function nudgePreview(dx, dy) {
+        pv.panX = Math.max(-1.5, Math.min(1.5, pv.panX + dx));
+        pv.panY = Math.max(-1.5, Math.min(1.5, pv.panY + dy));
+        refreshPreviewView();
     }
 
     function hidePreview() {
@@ -640,6 +655,21 @@
         if (!Number.isFinite(raw) || raw < 1) raw = 1;
         const clamped = Math.min(QTY_MAX, raw);
         if (String(clamped) !== els.qtyInput.value) setQty(clamped);
+    });
+
+    // Preview view controls (zoom slider + pan nudges)
+    document.getElementById('pvZoom').addEventListener('input', (ev) => {
+        pv.zoom = (parseInt(ev.target.value, 10) || 100) / 100;
+        refreshPreviewDebounced();
+    });
+    document.getElementById('pvLeft').addEventListener('click', () => nudgePreview(-0.15, 0));
+    document.getElementById('pvRight').addEventListener('click', () => nudgePreview(0.15, 0));
+    document.getElementById('pvUp').addEventListener('click', () => nudgePreview(0, 0.15));
+    document.getElementById('pvDown').addEventListener('click', () => nudgePreview(0, -0.15));
+    document.getElementById('pvReset').addEventListener('click', () => {
+        pv.zoom = 1; pv.panX = 0; pv.panY = 0;
+        document.getElementById('pvZoom').value = 100;
+        refreshPreviewView();
     });
 
     els.useBtn.addEventListener('click', doPrimaryAction);

@@ -182,6 +182,25 @@ header h1 {
     font-size: 15px;
     color: #8e9ba8;
 }
+.preview-ctrls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    justify-content: center;
+}
+.preview-ctrls button {
+    min-width: 44px;
+    height: 40px;
+    font-size: 18px;
+    background: rgba(220, 232, 244, 0.10);
+    color: #d7e0ea;
+    border: 1px solid rgba(218, 228, 238, 0.25);
+    border-radius: 5px;
+    cursor: pointer;
+}
+.preview-ctrls button:hover { background: rgba(220, 232, 244, 0.22); }
+.preview-ctrls input[type="range"] { flex: 1; max-width: 180px; }
 
 #itemsView .list-container {
     display: flex;
