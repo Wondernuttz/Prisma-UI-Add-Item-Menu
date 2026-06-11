@@ -147,17 +147,29 @@
         return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
     }
 
-    const pv = { zoom: 1, panX: 0, panY: 0 };
+    // Per-item view settings: zoom/pan tweaks stick to the item they were made on
+    const pvStore = {};
+
+    function pvFor(it) {
+        const k = itemKey(it);
+        return pvStore[k] || (pvStore[k] = { zoom: 1, panX: 0, panY: 0 });
+    }
+
+    function syncPvSlider(it) {
+        const slider = document.getElementById('pvZoom');
+        if (slider && it) slider.value = String(Math.round(pvFor(it).zoom * 100));
+    }
 
     function showPreviewNow(it) {
         if (!previewAvailable() || !it) return;
         const rect = previewRectPx();
         if (rect.w <= 0 || rect.h <= 0) return;
+        const p = pvFor(it);
         window.__prismaUI_showModelPreview(JSON.stringify({
             plugin: it.plugin,
             localId: Number(it.localId) >>> 0,
             x: rect.x, y: rect.y, w: rect.w, h: rect.h,
-            zoom: pv.zoom, panX: pv.panX, panY: pv.panY,
+            zoom: p.zoom, panX: p.panX, panY: p.panY,
         }));
     }
 
@@ -168,8 +180,11 @@
     const refreshPreviewDebounced = debounce(refreshPreviewView, 100);
 
     function nudgePreview(dx, dy) {
-        pv.panX = Math.max(-1.5, Math.min(1.5, pv.panX + dx));
-        pv.panY = Math.max(-1.5, Math.min(1.5, pv.panY + dy));
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        const p = pvFor(it);
+        p.panX = Math.max(-1.5, Math.min(1.5, p.panX + dx));
+        p.panY = Math.max(-1.5, Math.min(1.5, p.panY + dy));
         refreshPreviewView();
     }
 
@@ -403,6 +418,7 @@
         const next = els.itemList.querySelector(`li[data-idx="${i}"]`);
         if (next) next.classList.add('selected');
         if (scrollIntoView) keepItemVisible(next);
+        syncPvSlider(state.items[i]);
         showPreviewNow(state.items[i]);
         restoreActionButtonLabels();
     }
@@ -657,18 +673,22 @@
         if (String(clamped) !== els.qtyInput.value) setQty(clamped);
     });
 
-    // Preview view controls (zoom slider + pan nudges)
+    // Preview view controls (zoom slider + pan nudges); settings are per-item
     document.getElementById('pvZoom').addEventListener('input', (ev) => {
-        pv.zoom = (parseInt(ev.target.value, 10) || 100) / 100;
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        pvFor(it).zoom = (parseInt(ev.target.value, 10) || 100) / 100;
         refreshPreviewDebounced();
     });
     document.getElementById('pvLeft').addEventListener('click', () => nudgePreview(-0.15, 0));
     document.getElementById('pvRight').addEventListener('click', () => nudgePreview(0.15, 0));
-    document.getElementById('pvUp').addEventListener('click', () => nudgePreview(0, 0.15));
-    document.getElementById('pvDown').addEventListener('click', () => nudgePreview(0, -0.15));
+    document.getElementById('pvUp').addEventListener('click', () => nudgePreview(0, -0.15));
+    document.getElementById('pvDown').addEventListener('click', () => nudgePreview(0, 0.15));
     document.getElementById('pvReset').addEventListener('click', () => {
-        pv.zoom = 1; pv.panX = 0; pv.panY = 0;
-        document.getElementById('pvZoom').value = 100;
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        delete pvStore[itemKey(it)];
+        syncPvSlider(it);
         refreshPreviewView();
     });
 
