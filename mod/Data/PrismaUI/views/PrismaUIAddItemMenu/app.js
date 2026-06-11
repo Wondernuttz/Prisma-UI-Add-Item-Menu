@@ -152,7 +152,7 @@
 
     function pvFor(it) {
         const k = itemKey(it);
-        return pvStore[k] || (pvStore[k] = { zoom: 1, panX: 0, panY: 0 });
+        return pvStore[k] || (pvStore[k] = { zoom: 1, panX: 0, panY: 0, flip: 0 });
     }
 
     function syncPvSlider(it) {
@@ -169,7 +169,7 @@
             plugin: it.plugin,
             localId: Number(it.localId) >>> 0,
             x: rect.x, y: rect.y, w: rect.w, h: rect.h,
-            zoom: p.zoom, panX: p.panX, panY: p.panY,
+            zoom: p.zoom, panX: p.panX, panY: p.panY, flip: p.flip,
         }));
     }
 
@@ -680,10 +680,17 @@
         pvFor(it).zoom = (parseInt(ev.target.value, 10) || 100) / 100;
         refreshPreviewDebounced();
     });
-    document.getElementById('pvLeft').addEventListener('click', () => nudgePreview(-0.15, 0));
-    document.getElementById('pvRight').addEventListener('click', () => nudgePreview(0.15, 0));
+    document.getElementById('pvLeft').addEventListener('click', () => nudgePreview(0.15, 0));
+    document.getElementById('pvRight').addEventListener('click', () => nudgePreview(-0.15, 0));
     document.getElementById('pvUp').addEventListener('click', () => nudgePreview(0, -0.15));
     document.getElementById('pvDown').addEventListener('click', () => nudgePreview(0, 0.15));
+    document.getElementById('pvFlip').addEventListener('click', () => {
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        const p = pvFor(it);
+        p.flip = p.flip ? 0 : 1;
+        refreshPreviewView();
+    });
     document.getElementById('pvReset').addEventListener('click', () => {
         const it = state.items[state.selectedIndex];
         if (!it) return;
