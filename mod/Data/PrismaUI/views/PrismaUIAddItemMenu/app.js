@@ -135,6 +135,39 @@
         };
     }
 
+    // ── 3D model preview (PrismaUI ModelPreview API, optional) ─────────────
+    // Only present on PrismaUI builds with the ModelPreview feature; on
+    // upstream/flat builds these globals are undefined and the pane stays hidden.
+    function previewAvailable() {
+        return typeof window.__prismaUI_showModelPreview === 'function';
+    }
+
+    function previewRectPx() {
+        const r = document.getElementById('previewRect').getBoundingClientRect();
+        return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
+    }
+
+    function showPreviewNow(it) {
+        if (!previewAvailable() || !it) return;
+        const rect = previewRectPx();
+        if (rect.w <= 0 || rect.h <= 0) return;
+        window.__prismaUI_showModelPreview(JSON.stringify({
+            plugin: it.plugin,
+            localId: Number(it.localId) >>> 0,
+            x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+        }));
+    }
+
+    const showPreviewDebounced = debounce(showPreviewNow, 250);
+
+    function hidePreview() {
+        if (previewAvailable()) window.__prismaUI_hideModelPreview('');
+    }
+
+    function syncPreviewPane() {
+        document.getElementById('previewPane').classList.toggle('hidden', !previewAvailable());
+    }
+
     // ── View switching ─────────────────────────────────────────────────────
     let addFeedbackTimer = 0;
     let addToastTimer = 0;
@@ -248,6 +281,8 @@
         updateItemsStatus();
         updatePagination();
         restoreActionButtonLabels();
+        syncPreviewPane();
+        hidePreview();
     };
 
     window.__prismaUIAddItem_onAddResult = function(jsonStr) {
@@ -320,6 +355,7 @@
 
             li.addEventListener('click', () => selectItemIndex(i));
             li.addEventListener('dblclick', () => { selectItemIndex(i); doPrimaryAction(); });
+            li.addEventListener('mouseenter', () => showPreviewDebounced(it));
             frag.appendChild(li);
         }
         els.itemList.replaceChildren(frag);
@@ -348,6 +384,7 @@
         const next = els.itemList.querySelector(`li[data-idx="${i}"]`);
         if (next) next.classList.add('selected');
         if (scrollIntoView) keepItemVisible(next);
+        showPreviewNow(state.items[i]);
         restoreActionButtonLabels();
     }
 
@@ -422,10 +459,13 @@
 
         showView('items');
         els.itemsStatus.textContent = 'Loading items…';
+        syncPreviewPane();
+        hidePreview();
         queryItems();
     }
 
     function backToMods() {
+        hidePreview();
         showView('mods');
     }
 
@@ -519,6 +559,7 @@
     }
 
     function doClose() {
+        hidePreview();
         callBridge('__prismaUIAddItem_close', '');
     }
 
@@ -595,6 +636,13 @@
         if (!Number.isFinite(raw) || raw < 1) raw = 1;
         const clamped = Math.min(QTY_MAX, raw);
         if (String(clamped) !== els.qtyInput.value) setQty(clamped);
+    });
+
+    // Hover preview ends: fall back to the selected item, or clear
+    els.itemList.addEventListener('mouseleave', () => {
+        const it = state.items[state.selectedIndex];
+        if (it) showPreviewNow(it);
+        else hidePreview();
     });
 
     els.useBtn.addEventListener('click', doPrimaryAction);
