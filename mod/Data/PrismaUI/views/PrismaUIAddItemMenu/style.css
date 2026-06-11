@@ -161,7 +161,7 @@ header h1 {
 
 /* ─── 3D preview pane (hidden unless the framework exposes the API) ──── */
 .preview-pane {
-    width: 432px;
+    width: 560px;
     flex: none;
     display: flex;
     flex-direction: column;

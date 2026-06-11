@@ -163,7 +163,14 @@
     }
 
     function syncPreviewPane() {
-        document.getElementById('previewPane').classList.toggle('hidden', !previewAvailable());
+        const pane = document.getElementById('previewPane');
+        pane.classList.toggle('hidden', !previewAvailable());
+        if (!previewAvailable()) return;
+        // Square preview sized to whatever the pane allows
+        const rect = document.getElementById('previewRect');
+        const size = Math.max(200, Math.min(pane.clientWidth - 16, pane.clientHeight - 70));
+        rect.style.width = size + 'px';
+        rect.style.height = size + 'px';
     }
 
     // ── View switching ─────────────────────────────────────────────────────
