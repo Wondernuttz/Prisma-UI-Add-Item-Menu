@@ -147,8 +147,29 @@
         return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
     }
 
-    // Per-item view settings: zoom/pan tweaks stick to the item they were made on
-    const pvStore = {};
+    // Per-item view settings: zoom/pan tweaks stick to the item they were made on.
+    // Persisted via localStorage (best-effort; no-op if the runtime has no storage).
+    function loadPvStore() {
+        try {
+            const raw = window.localStorage ? localStorage.getItem('pvAddItemViews') : null;
+            if (raw) {
+                const o = JSON.parse(raw);
+                if (o && typeof o === 'object') return o;
+            }
+        } catch (e) {}
+        return {};
+    }
+    const pvStore = loadPvStore();
+
+    let pvSaveTimer = 0;
+    function savePvStore() {
+        clearTimeout(pvSaveTimer);
+        pvSaveTimer = window.setTimeout(() => {
+            try {
+                if (window.localStorage) localStorage.setItem('pvAddItemViews', JSON.stringify(pvStore));
+            } catch (e) {}
+        }, 400);
+    }
 
     function pvFor(it) {
         const k = itemKey(it);
@@ -186,6 +207,7 @@
         const p = pvFor(it);
         p.panX = Math.max(-1.5, Math.min(1.5, p.panX + dx));
         p.panY = Math.max(-1.5, Math.min(1.5, p.panY + dy));
+        savePvStore();
         refreshPreviewView();
     }
 
@@ -679,6 +701,7 @@
         const it = state.items[state.selectedIndex];
         if (!it) return;
         pvFor(it).zoom = (parseInt(ev.target.value, 10) || 100) / 100;
+        savePvStore();
         refreshPreviewDebounced();
     });
     document.getElementById('pvLeft').addEventListener('click', () => nudgePreview(0.15, 0));
@@ -690,6 +713,7 @@
         if (!it) return;
         const p = pvFor(it);
         p.flip = p.flip ? 0 : 1;
+        savePvStore();
         refreshPreviewView();
     });
     document.getElementById('pvRoll').addEventListener('click', () => {
@@ -697,12 +721,14 @@
         if (!it) return;
         const p = pvFor(it);
         p.roll = (p.roll + 45) % 360;
+        savePvStore();
         refreshPreviewView();
     });
     document.getElementById('pvReset').addEventListener('click', () => {
         const it = state.items[state.selectedIndex];
         if (!it) return;
         delete pvStore[itemKey(it)];
+        savePvStore();
         syncPvSlider(it);
         refreshPreviewView();
     });
