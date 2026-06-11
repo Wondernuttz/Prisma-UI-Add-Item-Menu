@@ -158,8 +158,6 @@
         }));
     }
 
-    const showPreviewDebounced = debounce(showPreviewNow, 250);
-
     function hidePreview() {
         if (previewAvailable()) window.__prismaUI_hideModelPreview('');
     }
@@ -355,7 +353,6 @@
 
             li.addEventListener('click', () => selectItemIndex(i));
             li.addEventListener('dblclick', () => { selectItemIndex(i); doPrimaryAction(); });
-            li.addEventListener('mouseenter', () => showPreviewDebounced(it));
             frag.appendChild(li);
         }
         els.itemList.replaceChildren(frag);
@@ -636,13 +633,6 @@
         if (!Number.isFinite(raw) || raw < 1) raw = 1;
         const clamped = Math.min(QTY_MAX, raw);
         if (String(clamped) !== els.qtyInput.value) setQty(clamped);
-    });
-
-    // Hover preview ends: fall back to the selected item, or clear
-    els.itemList.addEventListener('mouseleave', () => {
-        const it = state.items[state.selectedIndex];
-        if (it) showPreviewNow(it);
-        else hidePreview();
     });
 
     els.useBtn.addEventListener('click', doPrimaryAction);
