@@ -152,7 +152,7 @@
 
     function pvFor(it) {
         const k = itemKey(it);
-        return pvStore[k] || (pvStore[k] = { zoom: 1, panX: 0, panY: 0, flip: 0 });
+        return pvStore[k] || (pvStore[k] = { zoom: 1, panX: 0, panY: 0, flip: 0, roll: 0 });
     }
 
     function syncPvSlider(it) {
@@ -165,12 +165,12 @@
         const rect = previewRectPx();
         if (rect.w <= 0 || rect.h <= 0) return;
         const p = pvFor(it);
-        debugBridge('preview ' + itemKey(it) + ' zoom=' + p.zoom + ' pan=' + p.panX + ',' + p.panY + ' flip=' + p.flip);
+        debugBridge('preview ' + itemKey(it) + ' zoom=' + p.zoom + ' pan=' + p.panX + ',' + p.panY + ' flip=' + p.flip + ' roll=' + p.roll);
         window.__prismaUI_showModelPreview(JSON.stringify({
             plugin: it.plugin,
             localId: Number(it.localId) >>> 0,
             x: rect.x, y: rect.y, w: rect.w, h: rect.h,
-            zoom: p.zoom, panX: p.panX, panY: p.panY, flip: p.flip,
+            zoom: p.zoom, panX: p.panX, panY: p.panY, flip: p.flip, roll: p.roll,
         }));
     }
 
@@ -690,6 +690,13 @@
         if (!it) return;
         const p = pvFor(it);
         p.flip = p.flip ? 0 : 1;
+        refreshPreviewView();
+    });
+    document.getElementById('pvRoll').addEventListener('click', () => {
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        const p = pvFor(it);
+        p.roll = (p.roll + 45) % 360;
         refreshPreviewView();
     });
     document.getElementById('pvReset').addEventListener('click', () => {
