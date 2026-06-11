@@ -161,7 +161,7 @@ header h1 {
 
 /* ─── 3D preview pane (hidden unless the framework exposes the API) ──── */
 .preview-pane {
-    width: 248px;
+    width: 432px;
     flex: none;
     display: flex;
     flex-direction: column;
@@ -171,8 +171,8 @@ header h1 {
 }
 .preview-pane.hidden { display: none; }
 #previewRect {
-    width: 216px;
-    height: 216px;
+    width: 400px;
+    height: 400px;
     border: 1px solid rgba(218, 228, 238, 0.25);
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.22);
@@ -238,7 +238,7 @@ header h1 {
 /* ─── Item list rows ───────────────────────────────────────────────── */
 .item-list-header {
     display: grid;
-    grid-template-columns: 1fr 100px 100px 80px;
+    grid-template-columns: 1fr 90px 70px 80px;
     gap: 10px;
     padding: 4px 48px 6px 12px;
     color: #8e9ba8;
@@ -253,7 +253,7 @@ header h1 {
 
 #itemList li {
     display: grid;
-    grid-template-columns: 1fr 100px 100px 80px;
+    grid-template-columns: 1fr 90px 70px 80px;
     gap: 10px;
     padding: 10px 12px;
     border-bottom: 1px solid rgba(218, 228, 238, 0.15);
