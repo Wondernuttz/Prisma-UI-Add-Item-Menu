@@ -165,6 +165,7 @@
         const rect = previewRectPx();
         if (rect.w <= 0 || rect.h <= 0) return;
         const p = pvFor(it);
+        debugBridge('preview ' + itemKey(it) + ' zoom=' + p.zoom + ' pan=' + p.panX + ',' + p.panY + ' flip=' + p.flip);
         window.__prismaUI_showModelPreview(JSON.stringify({
             plugin: it.plugin,
             localId: Number(it.localId) >>> 0,
