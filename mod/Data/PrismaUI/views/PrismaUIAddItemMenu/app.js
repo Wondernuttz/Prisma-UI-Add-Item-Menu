@@ -221,7 +221,7 @@
         if (!previewAvailable()) return;
         // Square preview as tall as the list allows; pane width follows the square
         const rect = document.getElementById('previewRect');
-        const size = Math.max(200, pane.clientHeight - 130);
+        const size = Math.max(200, pane.clientHeight - 70);
         pane.style.width = (size + 24) + 'px';
         rect.style.width = size + 'px';
         rect.style.height = size + 'px';

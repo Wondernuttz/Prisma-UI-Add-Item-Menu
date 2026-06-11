@@ -166,8 +166,8 @@ header h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 14px 6px;
+    gap: 8px;
+    padding: 8px 6px;
 }
 .preview-pane.hidden { display: none; }
 #previewRect {
@@ -178,10 +178,7 @@ header h1 {
     background: linear-gradient(180deg, rgba(150, 160, 172, 0.22), rgba(60, 66, 74, 0.30));
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.18);
 }
-#previewHint {
-    font-size: 15px;
-    color: #8e9ba8;
-}
+#previewHint { display: none; }
 .preview-ctrls {
     display: flex;
     align-items: center;
@@ -191,7 +188,7 @@ header h1 {
 }
 .preview-ctrls button {
     min-width: 44px;
-    height: 40px;
+    height: 36px;
     font-size: 18px;
     background: rgba(220, 232, 244, 0.10);
     color: #d7e0ea;
