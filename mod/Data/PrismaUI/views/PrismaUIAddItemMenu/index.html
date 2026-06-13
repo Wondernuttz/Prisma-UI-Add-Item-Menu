@@ -102,10 +102,17 @@
                         <span class="value">Value</span>
                     </div>
                     <ul id="itemList"></ul>
+                    <!-- Selection nav: tap = prev/next item, hold = repeat (scroll-like) -->
+                    <button id="navUp" class="list-nav up" title="Previous item (hold to repeat)">&#9650;</button>
+                    <button id="navDown" class="list-nav down" title="Next item (hold to repeat)">&#9660;</button>
                 </div>
 
                 <!-- 3D preview pane: only revealed when the PrismaUI ModelPreview API exists -->
                 <aside id="previewPane" class="preview-pane hidden">
+                    <div id="previewTop" class="preview-top">
+                        <span class="bright-icon" title="Lighting">&#9728;</span>
+                        <input id="pvBright" type="range" min="20" max="250" value="100" title="Adjust lighting on the model">
+                    </div>
                     <div id="previewRect"></div>
                     <div id="previewCtrls" class="preview-ctrls">
                         <button id="pvLeft" title="Pan left">&#9664;</button>

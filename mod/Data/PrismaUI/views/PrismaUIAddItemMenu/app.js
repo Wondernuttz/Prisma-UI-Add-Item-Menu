@@ -70,6 +70,8 @@
         itemSearch:      document.getElementById('itemSearch'),
         tabs:            document.getElementById('tabs'),
         itemList:        document.getElementById('itemList'),
+        navUp:           document.getElementById('navUp'),
+        navDown:         document.getElementById('navDown'),
         itemsStatus:     document.getElementById('itemsStatus'),
         useBtn:          document.getElementById('useBtn'),
         addBtn:          document.getElementById('addBtn'),
@@ -177,6 +179,14 @@
         return pvStore[k] || (pvStore[k] = { zoom: 1, panX: 0, panY: 0, flip: 0, roll: 0 });
     }
 
+    // Brightness is a global viewer preference (lighting), not per-item.
+    let pvBrightness = (function() {
+        try {
+            const v = window.localStorage ? parseFloat(localStorage.getItem('pvBrightness')) : NaN;
+            return (v >= 0.2 && v <= 2.5) ? v : 1.0;
+        } catch (e) { return 1.0; }
+    })();
+
     function syncPvSlider(it) {
         const slider = document.getElementById('pvZoom');
         if (slider && it) slider.value = String(Math.round(pvFor(it).zoom * 100));
@@ -200,6 +210,7 @@
             localId: Number(it.localId) >>> 0,
             x: rect.x, y: rect.y, w: rect.w, h: rect.h,
             zoom: p.zoom, panX: p.panX, panY: p.panY, flip: p.flip, roll: p.roll,
+            brightness: pvBrightness,
         };
         if (pvSpinState.grabbed) {
             // User owns the rotation: turntable off, yaw/pitch follow the drag
@@ -483,6 +494,35 @@
         restoreActionButtonLabels();
     }
 
+    // Move the selection by ±1 within the loaded page (clamped). Used by the
+    // up/down nav buttons (tap = one step, hold = repeats).
+    function moveSelection(delta) {
+        if (!state.items.length) return;
+        let i = state.selectedIndex;
+        if (i < 0) i = (delta > 0) ? -1 : state.items.length; // first tap lands at an edge
+        const ni = Math.max(0, Math.min(state.items.length - 1, i + delta));
+        if (ni !== state.selectedIndex) selectItemIndex(ni, true);
+    }
+
+    // Tap = one move; press-and-hold = repeat after a short delay (like the qty arrows).
+    function bindHoldRepeat(btn, fn) {
+        let holdTimer = 0, repeatTimer = 0;
+        const stop = () => {
+            clearTimeout(holdTimer); clearInterval(repeatTimer);
+            holdTimer = 0; repeatTimer = 0;
+        };
+        btn.addEventListener('mousedown', (ev) => {
+            ev.preventDefault();
+            fn(); // immediate step on press
+            holdTimer = window.setTimeout(() => {
+                repeatTimer = window.setInterval(fn, 90); // ~11/sec while held
+            }, 350);
+        });
+        btn.addEventListener('mouseup', stop);
+        btn.addEventListener('mouseleave', stop);
+        window.addEventListener('mouseup', stop);
+    }
+
     function updateItemsStatus() {
         els.itemsStatus.classList.remove('ok', 'error');
         const startIdx = state.totalMatched === 0 ? 0 : (state.page * state.pageSize) + 1;
@@ -744,6 +784,17 @@
         savePvStore();
         refreshPreviewDebounced();
     });
+    // Brightness slider — global lighting preference, applies to all items
+    (function() {
+        const bright = document.getElementById('pvBright');
+        if (!bright) return;
+        bright.value = String(Math.round(pvBrightness * 100));
+        bright.addEventListener('input', (ev) => {
+            pvBrightness = (parseInt(ev.target.value, 10) || 100) / 100;
+            try { if (window.localStorage) localStorage.setItem('pvBrightness', String(pvBrightness)); } catch (e) {}
+            refreshPreviewDebounced();
+        });
+    })();
     document.getElementById('pvLeft').addEventListener('click', () => nudgePreview(0.15, 0));
     document.getElementById('pvRight').addEventListener('click', () => nudgePreview(-0.15, 0));
     document.getElementById('pvUp').addEventListener('click', () => nudgePreview(0, -0.15));
@@ -809,6 +860,10 @@
             showPreviewNow(it);
         });
     })();
+
+    // Item selection nav: tap = prev/next, hold = repeat
+    if (els.navUp)   bindHoldRepeat(els.navUp,   () => moveSelection(-1));
+    if (els.navDown) bindHoldRepeat(els.navDown, () => moveSelection(1));
 
     els.useBtn.addEventListener('click', doPrimaryAction);
     els.addBtn.addEventListener('click', doAdd);

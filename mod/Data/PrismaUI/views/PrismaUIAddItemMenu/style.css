@@ -204,6 +204,19 @@ header h1 {
     padding: 8px 6px;
 }
 .preview-pane.hidden { display: none; }
+/* Brightness row at the top of the preview — light icon + slider, like the zoom bar */
+.preview-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 400px;
+}
+.preview-top .bright-icon {
+    font-size: 20px;
+    color: #e0d8a0;
+    line-height: 1;
+}
+.preview-top input[type="range"] { flex: 1; }
 #previewRect {
     width: 400px;
     height: 400px;
@@ -245,32 +258,65 @@ header h1 {
     width: 100%;
 }
 
+/* Scroll column = one vertical lane on the right at the original (wider) 30px:
+   ▲ button on top, a light-gray slider-style track box with an oval thumb in the
+   middle, ▼ button on bottom — all the same width, lined up.
+   Tap an arrow = move selection one item; hold = repeat (VR-friendly). */
+.list-nav {
+    position: absolute;
+    right: 0;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(180deg, #e4e6ea, #c2c6cc);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    color: #2a2a2a;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 5;
+    padding: 0;
+    border-radius: 15px;
+    transition: background .06s, color .06s;
+}
+.list-nav.up   { top: 24px; }      /* aligns with the top of the scrollable list */
+.list-nav.down { bottom: 0; }
+.list-nav:hover,
+.list-nav:active {
+    background: linear-gradient(180deg, #ffffff, #d8d8d8);
+    color: #000000;
+}
+
 #modList, #itemList {
     list-style: none;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: auto;
-    scrollbar-color: #9a9a9a rgba(0,0,0,0.3);
+    scrollbar-color: #6b7079 rgba(190,193,200,0.5);
 }
 #modList { height: 100%; }
 #itemList { flex: 1; min-height: 0; }
+/* Original 30px width. Track is a light-gray slider-style box; the oval thumb is a
+   contrasting darker gray so it reads against the light track. Same width as the
+   arrows so ▲ / track / ▼ form one aligned column. */
 #modList::-webkit-scrollbar,
-#itemList::-webkit-scrollbar {
-    width: 30px;
-}
+#itemList::-webkit-scrollbar { width: 30px; }
 #modList::-webkit-scrollbar-track,
 #itemList::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.30);
+    background: rgba(190, 193, 200, 0.45);
+    border-radius: 15px;
+    margin: 2px 0;
 }
 #modList::-webkit-scrollbar-thumb,
 #itemList::-webkit-scrollbar-thumb {
-    background: #b9b9b9;
-    border: 10px solid rgba(0,0,0,0.30);
-    border-radius: 0;
+    background: linear-gradient(180deg, #9aa0a8, #6b7079);
+    border: 6px solid transparent;
+    background-clip: padding-box;
+    border-radius: 15px;
 }
 #modList::-webkit-scrollbar-thumb:hover,
 #itemList::-webkit-scrollbar-thumb:hover {
-    background: #ffffff;
+    background: linear-gradient(180deg, #b6bcc4, #82878f);
+    background-clip: padding-box;
 }
 
 /* ─── Mod list rows — flat, no separator lines ─────────────────────── */
@@ -303,7 +349,8 @@ header h1 {
     display: grid;
     grid-template-columns: 1fr 110px 90px 90px;
     gap: 10px;
-    padding: 4px 42px 6px 12px;
+    /* right padding = the 26px scroll column so headers align with row cells */
+    padding: 4px 30px 6px 12px;
     color: #9a9a9a;
     font-size: 15px;
     text-transform: uppercase;
