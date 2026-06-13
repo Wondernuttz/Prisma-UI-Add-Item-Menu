@@ -208,6 +208,7 @@
         const args = {
             plugin: it.plugin,
             localId: Number(it.localId) >>> 0,
+            formId: Number(it.rawFormID) >>> 0,   // exact runtime FormID — authoritative, dodges LookupForm misresolve
             x: rect.x, y: rect.y, w: rect.w, h: rect.h,
             zoom: p.zoom, panX: p.panX, panY: p.panY, flip: p.flip, roll: p.roll,
             brightness: pvBrightness,

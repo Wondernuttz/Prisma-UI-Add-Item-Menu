@@ -148,6 +148,7 @@ namespace PrismaBridge
                    << "\"plugin\":\""  << EscapeJsonString(it.pluginName) << "\","
                    << "\"type\":\""    << it.typeStr                      << "\","
                    << "\"localId\":"   << it.localFormID                  << ","
+                   << "\"rawFormID\":" << it.rawFormID                    << ","
                    << "\"weight\":"    << it.weight                       << ","
                    << "\"value\":"     << it.value
                    << "}";
