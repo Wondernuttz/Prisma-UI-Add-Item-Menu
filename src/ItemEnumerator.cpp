@@ -7,6 +7,7 @@ namespace ItemEnumerator
     {
         std::shared_mutex          g_mutex;
         std::vector<ItemRecord>    g_cache;
+        std::vector<size_t>        g_nameOrder;  // cache indices sorted by lowercase name
 
         // Helper: type-tag + walk for one form type. Templated on RE form class.
         // Skipped silently if the form has no display name (e.g. dummy items).
@@ -102,10 +103,25 @@ namespace ItemEnumerator
         // they need AddSpell. If we add a Spells tab later it gets its own enumerator
         // and its own action handler.
 
+        // Name-sorted index, built once: queries page alphabetically (SkyUI-style),
+        // so "All Mods" interleaves every plugin instead of fronting load order.
+        // The cache itself stays in load order for the plugin-list views.
+        std::vector<size_t> order(next.size());
+        for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+        std::vector<std::string> keys(next.size());
+        for (size_t i = 0; i < next.size(); ++i) {
+            keys[i] = next[i].fullName;
+            std::transform(keys[i].begin(), keys[i].end(), keys[i].begin(),
+                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        }
+        std::sort(order.begin(), order.end(),
+            [&keys](size_t a, size_t b) { return keys[a] < keys[b]; });
+
         const auto count = next.size();
         {
             std::unique_lock<std::shared_mutex> w(g_mutex);
             g_cache.swap(next);
+            g_nameOrder.swap(order);
         }
         logger::info("ItemEnumerator: cached {} forms", count);
     }
@@ -147,7 +163,9 @@ namespace ItemEnumerator
         std::vector<Match> matched;
         matched.reserve(g_cache.size() / 4);
 
-        for (size_t i = 0; i < g_cache.size(); ++i) {
+        // Walk in name order so unsearched queries page alphabetically across all plugins
+        for (size_t si = 0; si < g_cache.size(); ++si) {
+            const size_t i = (si < g_nameOrder.size()) ? g_nameOrder[si] : si;
             const auto& it = g_cache[i];
 
             if (!req.typeFilter.empty() && it.typeStr != req.typeFilter)   continue;

@@ -66,6 +66,7 @@
         // items view
         itemsView:       document.getElementById('itemsView'),
         itemsTitle:      document.getElementById('itemsTitle'),
+        catTitle:        document.getElementById('catTitle'),
         itemSearch:      document.getElementById('itemSearch'),
         tabs:            document.getElementById('tabs'),
         itemList:        document.getElementById('itemList'),
@@ -187,12 +188,34 @@
         if (rect.w <= 0 || rect.h <= 0) return;
         const p = pvFor(it);
         debugBridge('preview ' + itemKey(it) + ' zoom=' + p.zoom + ' pan=' + p.panX + ',' + p.panY + ' flip=' + p.flip + ' roll=' + p.roll);
-        window.__prismaUI_showModelPreview(JSON.stringify({
+        // Spin/grab state is per-session and resets when the selection changes:
+        // each newly selected item starts on the spinning turntable.
+        const k = itemKey(it);
+        if (pvSpinState.key !== k) {
+            pvSpinState = { key: k, paused: false, grabbed: false, yaw: 0, pitch: 0 };
+            pvUpdateSpinBtn();
+        }
+        const args = {
             plugin: it.plugin,
             localId: Number(it.localId) >>> 0,
             x: rect.x, y: rect.y, w: rect.w, h: rect.h,
             zoom: p.zoom, panX: p.panX, panY: p.panY, flip: p.flip, roll: p.roll,
-        }));
+        };
+        if (pvSpinState.grabbed) {
+            // User owns the rotation: turntable off, yaw/pitch follow the drag
+            args.spin = 0;
+            args.yaw = pvSpinState.yaw;
+            args.pitch = pvSpinState.pitch;
+        } else if (pvSpinState.paused) {
+            args.spin = 0;   // no yaw sent: framework freezes at the current angle
+        }
+        window.__prismaUI_showModelPreview(JSON.stringify(args));
+    }
+
+    let pvSpinState = { key: '', paused: false, grabbed: false, yaw: 0, pitch: 0 };
+    function pvUpdateSpinBtn() {
+        const btn = document.getElementById('pvSpin');
+        if (btn) btn.innerHTML = pvSpinState.paused ? '&#9654;' : '&#9208;';
     }
 
     function refreshPreviewView() {
@@ -379,6 +402,19 @@
             : state.plugins;
 
         const frag = document.createDocumentFragment();
+
+        // Aggregate "All Mods" row pinned at the top — browses every plugin at once.
+        if (!needle && state.plugins.length > 0) {
+            const total = state.plugins.reduce((sum, p) => sum + (p.count || 0), 0);
+            const li = document.createElement('li');
+            li.className = 'all-row';
+            const name  = document.createElement('span'); name.className  = 'mod-name';  name.textContent  = 'All Mods';
+            const count = document.createElement('span'); count.className = 'mod-count'; count.textContent = `${total} item${total === 1 ? '' : 's'}`;
+            li.append(name, count);
+            li.addEventListener('click', () => enterMod(''));
+            frag.appendChild(li);
+        }
+
         for (const p of filtered) {
             const li = document.createElement('li');
             li.dataset.name = p.name;
@@ -514,7 +550,8 @@
         els.itemSearch.value = '';
         for (const t of els.tabs.querySelectorAll('.tab')) t.classList.remove('active');
         els.tabs.querySelector('.tab[data-type=""]').classList.add('active');
-        els.itemsTitle.textContent = pluginName;
+        els.itemsTitle.textContent = pluginName || 'All Mods';
+        if (els.catTitle) els.catTitle.textContent = 'ALL';
 
         showView('items');
         els.itemsStatus.textContent = 'Loading items…';
@@ -532,8 +569,9 @@
         callBridge('__prismaUIAddItem_query', {
             type:           state.type,
             search:         state.search,
-            plugin:         state.selectedPlugin,
-            excludeVanilla: false,    // already filtered at the mod-list level
+            plugin:         state.selectedPlugin,  // '' = all mods (DLL treats empty filter as no filter)
+            // Single mod: already filtered at the mod-list level. All Mods: honor the toggle.
+            excludeVanilla: state.selectedPlugin ? false : state.excludeVanilla,
             page:           state.page,
             pageSize:       state.pageSize,
         });
@@ -646,6 +684,7 @@
         if (!btn) return;
         for (const t of els.tabs.querySelectorAll('.tab')) t.classList.remove('active');
         btn.classList.add('active');
+        if (els.catTitle) els.catTitle.textContent = (btn.title || 'All').toUpperCase();
         state.type = btn.dataset.type;
         state.page = 0;
         queryItems();
@@ -709,13 +748,16 @@
     document.getElementById('pvRight').addEventListener('click', () => nudgePreview(-0.15, 0));
     document.getElementById('pvUp').addEventListener('click', () => nudgePreview(0, -0.15));
     document.getElementById('pvDown').addEventListener('click', () => nudgePreview(0, 0.15));
-    document.getElementById('pvFlip').addEventListener('click', () => {
+    // Rotation start/stop: pause freezes in place (framework banks the angle),
+    // resume continues from the frozen angle. Grabbing also pauses; selecting
+    // another item always resumes the turntable.
+    document.getElementById('pvSpin').addEventListener('click', () => {
         const it = state.items[state.selectedIndex];
         if (!it) return;
-        const p = pvFor(it);
-        p.flip = p.flip ? 0 : 1;
-        savePvStore();
-        refreshPreviewView();
+        pvSpinState.paused = !pvSpinState.paused;
+        if (!pvSpinState.paused) pvSpinState.grabbed = false;  // resume releases the grab
+        pvUpdateSpinBtn();
+        showPreviewNow(it);
     });
     document.getElementById('pvRoll').addEventListener('click', () => {
         const it = state.items[state.selectedIndex];
@@ -729,10 +771,44 @@
         const it = state.items[state.selectedIndex];
         if (!it) return;
         delete pvStore[itemKey(it)];
+        pvSpinState = { key: '', paused: false, grabbed: false, yaw: 0, pitch: 0 };
+        pvUpdateSpinBtn();
         savePvStore();
         syncPvSlider(it);
         refreshPreviewView();
     });
+
+    // Grab-and-tumble: drag on the preview (mouse, or OCU laser with trigger held —
+    // PrismaVR delivers laser drags as mouse events). Horizontal = yaw, vertical = pitch.
+    (function setupPreviewGrab() {
+        const rect = document.getElementById('previewRect');
+        if (!rect) return;
+        let dragging = false, lastX = 0, lastY = 0;
+        rect.addEventListener('mousedown', (ev) => {
+            const it = state.items[state.selectedIndex];
+            if (!it || !previewAvailable()) return;
+            dragging = true;
+            lastX = ev.clientX;
+            lastY = ev.clientY;
+            ev.preventDefault();
+        });
+        window.addEventListener('mouseup', () => {
+            if (dragging) { dragging = false; savePvStore(); }
+        });
+        window.addEventListener('mousemove', (ev) => {
+            if (!dragging) return;
+            const it = state.items[state.selectedIndex];
+            if (!it) { dragging = false; return; }
+            pvSpinState.grabbed = true;
+            pvSpinState.paused = true;
+            pvSpinState.yaw = (pvSpinState.yaw + (ev.clientX - lastX) * 0.5) % 360;
+            pvSpinState.pitch = Math.max(-85, Math.min(85, pvSpinState.pitch + (ev.clientY - lastY) * 0.5));
+            lastX = ev.clientX;
+            lastY = ev.clientY;
+            pvUpdateSpinBtn();
+            showPreviewNow(it);
+        });
+    })();
 
     els.useBtn.addEventListener('click', doPrimaryAction);
     els.addBtn.addEventListener('click', doAdd);
