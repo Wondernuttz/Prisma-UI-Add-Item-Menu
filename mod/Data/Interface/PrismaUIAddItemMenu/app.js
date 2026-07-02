@@ -66,9 +66,12 @@
         // items view
         itemsView:       document.getElementById('itemsView'),
         itemsTitle:      document.getElementById('itemsTitle'),
+        catTitle:        document.getElementById('catTitle'),
         itemSearch:      document.getElementById('itemSearch'),
         tabs:            document.getElementById('tabs'),
         itemList:        document.getElementById('itemList'),
+        navUp:           document.getElementById('navUp'),
+        navDown:         document.getElementById('navDown'),
         itemsStatus:     document.getElementById('itemsStatus'),
         useBtn:          document.getElementById('useBtn'),
         addBtn:          document.getElementById('addBtn'),
@@ -133,6 +136,131 @@
             clearTimeout(t);
             t = setTimeout(() => fn.apply(this, args), ms);
         };
+    }
+
+    // ── 3D model preview (PrismaUI ModelPreview API, optional) ─────────────
+    // Only present on PrismaUI builds with the ModelPreview feature; on
+    // upstream/flat builds these globals are undefined and the pane stays hidden.
+    function previewAvailable() {
+        return typeof window.__prismaUI_showModelPreview === 'function';
+    }
+
+    function previewRectPx() {
+        const r = document.getElementById('previewRect').getBoundingClientRect();
+        return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) };
+    }
+
+    // Per-item view settings: zoom/pan tweaks stick to the item they were made on.
+    // Persisted via localStorage (best-effort; no-op if the runtime has no storage).
+    function loadPvStore() {
+        try {
+            const raw = window.localStorage ? localStorage.getItem('pvAddItemViews') : null;
+            if (raw) {
+                const o = JSON.parse(raw);
+                if (o && typeof o === 'object') return o;
+            }
+        } catch (e) {}
+        return {};
+    }
+    const pvStore = loadPvStore();
+
+    let pvSaveTimer = 0;
+    function savePvStore() {
+        clearTimeout(pvSaveTimer);
+        pvSaveTimer = window.setTimeout(() => {
+            try {
+                if (window.localStorage) localStorage.setItem('pvAddItemViews', JSON.stringify(pvStore));
+            } catch (e) {}
+        }, 400);
+    }
+
+    function pvFor(it) {
+        const k = itemKey(it);
+        return pvStore[k] || (pvStore[k] = { zoom: 1, panX: 0, panY: 0, flip: 0, roll: 0 });
+    }
+
+    // Brightness is a global viewer preference (lighting), not per-item.
+    let pvBrightness = (function() {
+        try {
+            const v = window.localStorage ? parseFloat(localStorage.getItem('pvBrightness')) : NaN;
+            return (v >= 0.2 && v <= 2.5) ? v : 1.0;
+        } catch (e) { return 1.0; }
+    })();
+
+    function syncPvSlider(it) {
+        const slider = document.getElementById('pvZoom');
+        if (slider && it) slider.value = String(Math.round(pvFor(it).zoom * 100));
+    }
+
+    function showPreviewNow(it) {
+        if (!previewAvailable() || !it) return;
+        const rect = previewRectPx();
+        if (rect.w <= 0 || rect.h <= 0) return;
+        const p = pvFor(it);
+        debugBridge('preview ' + itemKey(it) + ' zoom=' + p.zoom + ' pan=' + p.panX + ',' + p.panY + ' flip=' + p.flip + ' roll=' + p.roll);
+        // Spin/grab state is per-session and resets when the selection changes:
+        // each newly selected item starts on the spinning turntable.
+        const k = itemKey(it);
+        if (pvSpinState.key !== k) {
+            pvSpinState = { key: k, paused: false, grabbed: false, yaw: 0, pitch: 0 };
+            pvUpdateSpinBtn();
+        }
+        const args = {
+            plugin: it.plugin,
+            localId: Number(it.localId) >>> 0,
+            formId: Number(it.rawFormID) >>> 0,   // exact runtime FormID — authoritative, dodges LookupForm misresolve
+            x: rect.x, y: rect.y, w: rect.w, h: rect.h,
+            zoom: p.zoom, panX: p.panX, panY: p.panY, flip: p.flip, roll: p.roll,
+            brightness: pvBrightness,
+            spin: 45,  // AddItemMenu turntable is always on by its own request - the global ini default is 0
+        };
+        if (pvSpinState.grabbed) {
+            // User owns the rotation: turntable off, yaw/pitch follow the drag
+            args.spin = 0;
+            args.yaw = pvSpinState.yaw;
+            args.pitch = pvSpinState.pitch;
+        } else if (pvSpinState.paused) {
+            args.spin = 0;   // no yaw sent: framework freezes at the current angle
+        }
+        window.__prismaUI_showModelPreview(JSON.stringify(args));
+    }
+
+    let pvSpinState = { key: '', paused: false, grabbed: false, yaw: 0, pitch: 0 };
+    function pvUpdateSpinBtn() {
+        const btn = document.getElementById('pvSpin');
+        if (btn) btn.innerHTML = pvSpinState.paused ? '&#9654;' : '&#9208;';
+    }
+
+    function refreshPreviewView() {
+        const it = state.items[state.selectedIndex];
+        if (it) showPreviewNow(it);
+    }
+    const refreshPreviewDebounced = debounce(refreshPreviewView, 100);
+
+    function nudgePreview(dx, dy) {
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        const p = pvFor(it);
+        p.panX = Math.max(-1.5, Math.min(1.5, p.panX + dx));
+        p.panY = Math.max(-1.5, Math.min(1.5, p.panY + dy));
+        savePvStore();
+        refreshPreviewView();
+    }
+
+    function hidePreview() {
+        if (previewAvailable()) window.__prismaUI_hideModelPreview('');
+    }
+
+    function syncPreviewPane() {
+        const pane = document.getElementById('previewPane');
+        pane.classList.toggle('hidden', !previewAvailable());
+        if (!previewAvailable()) return;
+        // Square preview as tall as the list allows; pane width follows the square
+        const rect = document.getElementById('previewRect');
+        const size = Math.max(200, pane.clientHeight - 70);
+        pane.style.width = (size + 24) + 'px';
+        rect.style.width = size + 'px';
+        rect.style.height = size + 'px';
     }
 
     // ── View switching ─────────────────────────────────────────────────────
@@ -248,6 +376,8 @@
         updateItemsStatus();
         updatePagination();
         restoreActionButtonLabels();
+        syncPreviewPane();
+        hidePreview();
     };
 
     window.__prismaUIAddItem_onAddResult = function(jsonStr) {
@@ -285,6 +415,19 @@
             : state.plugins;
 
         const frag = document.createDocumentFragment();
+
+        // Aggregate "All Mods" row pinned at the top — browses every plugin at once.
+        if (!needle && state.plugins.length > 0) {
+            const total = state.plugins.reduce((sum, p) => sum + (p.count || 0), 0);
+            const li = document.createElement('li');
+            li.className = 'all-row';
+            const name  = document.createElement('span'); name.className  = 'mod-name';  name.textContent  = 'All Mods';
+            const count = document.createElement('span'); count.className = 'mod-count'; count.textContent = `${total} item${total === 1 ? '' : 's'}`;
+            li.append(name, count);
+            li.addEventListener('click', () => enterMod(''));
+            frag.appendChild(li);
+        }
+
         for (const p of filtered) {
             const li = document.createElement('li');
             li.dataset.name = p.name;
@@ -348,7 +491,38 @@
         const next = els.itemList.querySelector(`li[data-idx="${i}"]`);
         if (next) next.classList.add('selected');
         if (scrollIntoView) keepItemVisible(next);
+        syncPvSlider(state.items[i]);
+        showPreviewNow(state.items[i]);
         restoreActionButtonLabels();
+    }
+
+    // Move the selection by ±1 within the loaded page (clamped). Used by the
+    // up/down nav buttons (tap = one step, hold = repeats).
+    function moveSelection(delta) {
+        if (!state.items.length) return;
+        let i = state.selectedIndex;
+        if (i < 0) i = (delta > 0) ? -1 : state.items.length; // first tap lands at an edge
+        const ni = Math.max(0, Math.min(state.items.length - 1, i + delta));
+        if (ni !== state.selectedIndex) selectItemIndex(ni, true);
+    }
+
+    // Tap = one move; press-and-hold = repeat after a short delay (like the qty arrows).
+    function bindHoldRepeat(btn, fn) {
+        let holdTimer = 0, repeatTimer = 0;
+        const stop = () => {
+            clearTimeout(holdTimer); clearInterval(repeatTimer);
+            holdTimer = 0; repeatTimer = 0;
+        };
+        btn.addEventListener('mousedown', (ev) => {
+            ev.preventDefault();
+            fn(); // immediate step on press
+            holdTimer = window.setTimeout(() => {
+                repeatTimer = window.setInterval(fn, 90); // ~11/sec while held
+            }, 350);
+        });
+        btn.addEventListener('mouseup', stop);
+        btn.addEventListener('mouseleave', stop);
+        window.addEventListener('mouseup', stop);
     }
 
     function updateItemsStatus() {
@@ -418,14 +592,18 @@
         els.itemSearch.value = '';
         for (const t of els.tabs.querySelectorAll('.tab')) t.classList.remove('active');
         els.tabs.querySelector('.tab[data-type=""]').classList.add('active');
-        els.itemsTitle.textContent = pluginName;
+        els.itemsTitle.textContent = pluginName || 'All Mods';
+        if (els.catTitle) els.catTitle.textContent = 'ALL';
 
         showView('items');
         els.itemsStatus.textContent = 'Loading items…';
+        syncPreviewPane();
+        hidePreview();
         queryItems();
     }
 
     function backToMods() {
+        hidePreview();
         showView('mods');
     }
 
@@ -433,8 +611,9 @@
         callBridge('__prismaUIAddItem_query', {
             type:           state.type,
             search:         state.search,
-            plugin:         state.selectedPlugin,
-            excludeVanilla: false,    // already filtered at the mod-list level
+            plugin:         state.selectedPlugin,  // '' = all mods (DLL treats empty filter as no filter)
+            // Single mod: already filtered at the mod-list level. All Mods: honor the toggle.
+            excludeVanilla: state.selectedPlugin ? false : state.excludeVanilla,
             page:           state.page,
             pageSize:       state.pageSize,
         });
@@ -519,6 +698,7 @@
     }
 
     function doClose() {
+        hidePreview();
         callBridge('__prismaUIAddItem_close', '');
     }
 
@@ -546,6 +726,7 @@
         if (!btn) return;
         for (const t of els.tabs.querySelectorAll('.tab')) t.classList.remove('active');
         btn.classList.add('active');
+        if (els.catTitle) els.catTitle.textContent = (btn.title || 'All').toUpperCase();
         state.type = btn.dataset.type;
         state.page = 0;
         queryItems();
@@ -596,6 +777,95 @@
         const clamped = Math.min(QTY_MAX, raw);
         if (String(clamped) !== els.qtyInput.value) setQty(clamped);
     });
+
+    // Preview view controls (zoom slider + pan nudges); settings are per-item
+    document.getElementById('pvZoom').addEventListener('input', (ev) => {
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        pvFor(it).zoom = (parseInt(ev.target.value, 10) || 100) / 100;
+        savePvStore();
+        refreshPreviewDebounced();
+    });
+    // Brightness slider — global lighting preference, applies to all items
+    (function() {
+        const bright = document.getElementById('pvBright');
+        if (!bright) return;
+        bright.value = String(Math.round(pvBrightness * 100));
+        bright.addEventListener('input', (ev) => {
+            pvBrightness = (parseInt(ev.target.value, 10) || 100) / 100;
+            try { if (window.localStorage) localStorage.setItem('pvBrightness', String(pvBrightness)); } catch (e) {}
+            refreshPreviewDebounced();
+        });
+    })();
+    document.getElementById('pvLeft').addEventListener('click', () => nudgePreview(0.15, 0));
+    document.getElementById('pvRight').addEventListener('click', () => nudgePreview(-0.15, 0));
+    document.getElementById('pvUp').addEventListener('click', () => nudgePreview(0, -0.15));
+    document.getElementById('pvDown').addEventListener('click', () => nudgePreview(0, 0.15));
+    // Rotation start/stop: pause freezes in place (framework banks the angle),
+    // resume continues from the frozen angle. Grabbing also pauses; selecting
+    // another item always resumes the turntable.
+    document.getElementById('pvSpin').addEventListener('click', () => {
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        pvSpinState.paused = !pvSpinState.paused;
+        if (!pvSpinState.paused) pvSpinState.grabbed = false;  // resume releases the grab
+        pvUpdateSpinBtn();
+        showPreviewNow(it);
+    });
+    document.getElementById('pvRoll').addEventListener('click', () => {
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        const p = pvFor(it);
+        p.roll = (p.roll + 45) % 360;
+        savePvStore();
+        refreshPreviewView();
+    });
+    document.getElementById('pvReset').addEventListener('click', () => {
+        const it = state.items[state.selectedIndex];
+        if (!it) return;
+        delete pvStore[itemKey(it)];
+        pvSpinState = { key: '', paused: false, grabbed: false, yaw: 0, pitch: 0 };
+        pvUpdateSpinBtn();
+        savePvStore();
+        syncPvSlider(it);
+        refreshPreviewView();
+    });
+
+    // Grab-and-tumble: drag on the preview (mouse, or OCU laser with trigger held —
+    // PrismaVR delivers laser drags as mouse events). Horizontal = yaw, vertical = pitch.
+    (function setupPreviewGrab() {
+        const rect = document.getElementById('previewRect');
+        if (!rect) return;
+        let dragging = false, lastX = 0, lastY = 0;
+        rect.addEventListener('mousedown', (ev) => {
+            const it = state.items[state.selectedIndex];
+            if (!it || !previewAvailable()) return;
+            dragging = true;
+            lastX = ev.clientX;
+            lastY = ev.clientY;
+            ev.preventDefault();
+        });
+        window.addEventListener('mouseup', () => {
+            if (dragging) { dragging = false; savePvStore(); }
+        });
+        window.addEventListener('mousemove', (ev) => {
+            if (!dragging) return;
+            const it = state.items[state.selectedIndex];
+            if (!it) { dragging = false; return; }
+            pvSpinState.grabbed = true;
+            pvSpinState.paused = true;
+            pvSpinState.yaw = (pvSpinState.yaw + (ev.clientX - lastX) * 0.5) % 360;
+            pvSpinState.pitch = Math.max(-85, Math.min(85, pvSpinState.pitch + (ev.clientY - lastY) * 0.5));
+            lastX = ev.clientX;
+            lastY = ev.clientY;
+            pvUpdateSpinBtn();
+            showPreviewNow(it);
+        });
+    })();
+
+    // Item selection nav: tap = prev/next, hold = repeat
+    if (els.navUp)   bindHoldRepeat(els.navUp,   () => moveSelection(-1));
+    if (els.navDown) bindHoldRepeat(els.navDown, () => moveSelection(1));
 
     els.useBtn.addEventListener('click', doPrimaryAction);
     els.addBtn.addEventListener('click', doAdd);

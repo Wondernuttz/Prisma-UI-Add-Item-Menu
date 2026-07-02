@@ -212,6 +212,7 @@
             x: rect.x, y: rect.y, w: rect.w, h: rect.h,
             zoom: p.zoom, panX: p.panX, panY: p.panY, flip: p.flip, roll: p.roll,
             brightness: pvBrightness,
+            spin: 45,  // AddItemMenu turntable is always on by its own request - the global ini default is 0
         };
         if (pvSpinState.grabbed) {
             // User owns the rotation: turntable off, yaw/pitch follow the drag
