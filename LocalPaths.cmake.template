@@ -1,0 +1,9 @@
+# Copy this file to LocalPaths.cmake (gitignored) and fill in your paths.
+# Alternatively pass both as -D arguments to cmake.
+
+# A PrismaUI source checkout that has been configured/built at least once —
+# this project reuses its build/vcpkg_installed packages (fmt, spdlog).
+set(PRISMA_BUILD_ROOT "C:/path/to/PrismaUI")
+
+# A CommonLibSSE-NG (CommonLibVR) checkout.
+set(CommonLibPath "C:/path/to/CommonLibVR")

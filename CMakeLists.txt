@@ -10,10 +10,17 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STR
 
 project(PrismaUIAddItemMenu VERSION 0.1.0 LANGUAGES CXX)
 
+# ─── Machine-local paths ──────────────────────────────────────────────────────
+# PRISMA_BUILD_ROOT and CommonLibPath are developer-machine specific. Set them
+# in LocalPaths.cmake (gitignored, see LocalPaths.cmake.template) or pass -D.
+include("${CMAKE_SOURCE_DIR}/LocalPaths.cmake" OPTIONAL)
+
 # ─── Reuse Prisma's already-installed vcpkg packages ──────────────────────────
 # Mirrors the pattern PrismaVR-TestMod uses: no separate vcpkg install needed
 # for this project. fmt + spdlog land here.
-set(PRISMA_BUILD_ROOT "C:/Users/borja/Desktop/Prisma UI SRC")
+if(NOT DEFINED PRISMA_BUILD_ROOT)
+    message(FATAL_ERROR "PRISMA_BUILD_ROOT is not set — copy LocalPaths.cmake.template to LocalPaths.cmake and point it at your PrismaUI checkout (needs build/vcpkg_installed).")
+endif()
 set(VCPKG_INSTALLED_DIR "${PRISMA_BUILD_ROOT}/build/vcpkg_installed" CACHE STRING "" FORCE)
 list(APPEND CMAKE_PREFIX_PATH "${PRISMA_BUILD_ROOT}/build/vcpkg_installed/x64-windows-static/share")
 
@@ -24,7 +31,9 @@ set(RAPIDCSV_INCLUDE_DIRS
     CACHE PATH "" FORCE)
 
 # ─── CommonLibSSE-NG (local checkout, built once and cached) ─────────────────
-set(CommonLibPath "C:/Users/borja/Desktop/CommonLibVR-4.1.3")
+if(NOT DEFINED CommonLibPath)
+    message(FATAL_ERROR "CommonLibPath is not set — copy LocalPaths.cmake.template to LocalPaths.cmake and point it at your CommonLibSSE-NG/CommonLibVR checkout.")
+endif()
 set(CommonLibName "CommonLibSSE")
 set(BUILD_ROOT "${CMAKE_BINARY_DIR}")
 

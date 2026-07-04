@@ -34,3 +34,6 @@ HANDOFF.md
 
 # Runtime logs
 *.log
+
+# Machine-local build paths
+LocalPaths.cmake
